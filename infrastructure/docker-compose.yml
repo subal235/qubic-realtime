@@ -1,0 +1,97 @@
+version: '3.8'
+
+services:
+  # MicroAuth Service (HTTP + gRPC)
+  turboauth:
+    build:
+      context: ../services/turboauth/backend
+      dockerfile: Dockerfile
+    container_name: realtime-turboauth
+    ports:
+      - "8080:8080" # HTTP REST
+      - "9090:9090" # gRPC
+      - "2112:2112" # Prometheus metrics
+    environment:
+      - ENV=production
+      - HTTP_PORT=8080
+      - GRPC_PORT=9090
+      - QUBIC_NODE_URL=${QUBIC_NODE_URL:-http://qubic-node:21841}
+      - QUBIC_CONTRACT_ADDRESS=${QUBIC_CONTRACT_ADDRESS}
+      - REDIS_URL=redis:6379
+      - REDIS_PASSWORD=${REDIS_PASSWORD}
+      - REDIS_DB=0
+      - CACHE_TTL_SECONDS=300
+      - USE_MEMORY_CACHE=false
+      - LOG_LEVEL=info
+      - LOG_FORMAT=json
+      - METRICS_ENABLED=true
+      - METRICS_PORT=2112
+    depends_on:
+      - redis
+    networks:
+      - realtime-net
+    restart: unless-stopped
+    healthcheck:
+      test: [ "CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:8080/health" ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Redis Cache (Shared L2 cache)
+  redis:
+    image: redis:7-alpine
+    container_name: realtime-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    networks:
+      - realtime-net
+    restart: unless-stopped
+    command: redis-server --appendonly yes --maxmemory 512mb --maxmemory-policy allkeys-lru
+    healthcheck:
+      test: [ "CMD", "redis-cli", "ping" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Prometheus (Metrics Collection)
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: realtime-prometheus
+    ports:
+      - "9091:9090"
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus-data:/prometheus
+    networks:
+      - realtime-net
+    restart: unless-stopped
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+
+  # Grafana (Visualization)
+  grafana:
+    image: grafana/grafana:latest
+    container_name: realtime-grafana
+    ports:
+      - "3000:3000"
+    volumes:
+      - grafana-data:/var/lib/grafana
+    networks:
+      - realtime-net
+    restart: unless-stopped
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_PASSWORD:-admin}
+      - GF_INSTALL_PLUGINS=redis-datasource
+
+volumes:
+  redis-data:
+  prometheus-data:
+  grafana-data:
+
+
+networks:
+  realtime-net:
+    driver: bridge

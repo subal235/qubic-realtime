@@ -1,0 +1,44 @@
+# Binaries
+*.exe
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+microauth
+
+# Go
+vendor/
+*.coverprofile
+coverage.out
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Environment
+.env
+.env.local
+
+# Docker
+*.log
+
+# Build
+build/
+dist/
+*.a
+*.o
+
+# Generated
+api/proto/gen/
+
+# Temporary
+tmp/
+temp/

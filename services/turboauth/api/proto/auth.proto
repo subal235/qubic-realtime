@@ -1,0 +1,64 @@
+syntax = "proto3";
+
+package auth.v1;
+
+option go_package = "qubic-microauth/api/proto/gen/auth/v1;authv1";
+
+// AuthService provides authentication and authorization services
+service AuthService {
+  // GetStatus retrieves the authentication status for a wallet
+  rpc GetStatus(GetStatusRequest) returns (GetStatusResponse);
+  
+  // SetStatus updates the authentication status (admin only)
+  rpc SetStatus(SetStatusRequest) returns (SetStatusResponse);
+  
+  // VerifyWallet verifies a wallet signature
+  rpc VerifyWallet(VerifyWalletRequest) returns (VerifyWalletResponse);
+  
+  // BatchGetStatus retrieves status for multiple wallets (high-performance)
+  rpc BatchGetStatus(BatchGetStatusRequest) returns (BatchGetStatusResponse);
+}
+
+message GetStatusRequest {
+  string wallet_address = 1;
+}
+
+message GetStatusResponse {
+  string status = 1;           // ACTIVE, BLOCKED, REVIEW
+  int32 trust_score = 2;       // 0-100
+  int64 updated_at = 3;        // Unix timestamp
+  string contract_address = 4; // Smart contract address
+}
+
+message SetStatusRequest {
+  string wallet_address = 1;
+  string status = 2;
+  int32 trust_score = 3;
+  string admin_signature = 4;  // Admin authorization
+}
+
+message SetStatusResponse {
+  bool success = 1;
+  string tx_hash = 2;
+  string message = 3;
+}
+
+message VerifyWalletRequest {
+  string wallet_address = 1;
+  string signature = 2;
+  string message = 3;
+}
+
+message VerifyWalletResponse {
+  bool verified = 1;
+  string status = 2;
+  int32 trust_score = 3;
+}
+
+message BatchGetStatusRequest {
+  repeated string wallet_addresses = 1;
+}
+
+message BatchGetStatusResponse {
+  repeated GetStatusResponse statuses = 1;
+}
