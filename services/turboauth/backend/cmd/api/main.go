@@ -13,7 +13,7 @@ import (
 	"github.com/rs/zerolog/log"
 	"google.golang.org/grpc"
 
-	pb "turboauth/api/proto"
+	pb "turboauth/api/proto/api/proto"
 	grpcAdapter "turboauth/internal/adapters/primary/grpc"
 	httpAdapter "turboauth/internal/adapters/primary/http"
 	"turboauth/internal/adapters/secondary/qubic"

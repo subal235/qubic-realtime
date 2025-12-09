@@ -7,7 +7,7 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
-	pb "turboauth/api/proto"
+	pb "turboauth/api/proto/api/proto"
 	"turboauth/internal/domain/auth"
 	"turboauth/pkg/metrics"
 )

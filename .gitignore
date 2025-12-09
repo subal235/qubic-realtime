@@ -42,3 +42,6 @@ api/proto/gen/
 # Temporary
 tmp/
 temp/
+
+documents/
+documents/*

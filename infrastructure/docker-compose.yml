@@ -1,38 +1,76 @@
 version: '3.8'
 
 services:
-  # MicroAuth Service (HTTP + gRPC)
+  # TurboAuth Service (HTTP + gRPC)
   turboauth:
     build:
       context: ../services/turboauth/backend
       dockerfile: Dockerfile
     container_name: realtime-turboauth
+    env_file:
+      - ../.env
     ports:
-      - "8080:8080" # HTTP REST
-      - "9090:9090" # gRPC
-      - "2112:2112" # Prometheus metrics
+      - "${TURBOAUTH_HTTP_PORT:-8080}:${TURBOAUTH_HTTP_PORT:-8080}" # HTTP REST
+      - "${TURBOAUTH_GRPC_PORT:-9090}:${TURBOAUTH_GRPC_PORT:-9090}" # gRPC
+      - "${TURBOAUTH_METRICS_PORT:-2112}:${TURBOAUTH_METRICS_PORT:-2112}" # Prometheus metrics
     environment:
-      - ENV=production
-      - HTTP_PORT=8080
-      - GRPC_PORT=9090
-      - QUBIC_NODE_URL=${QUBIC_NODE_URL:-http://qubic-node:21841}
+      - ENV=${TURBOAUTH_ENV:-production}
+      - HTTP_PORT=${TURBOAUTH_HTTP_PORT:-8080}
+      - GRPC_PORT=${TURBOAUTH_GRPC_PORT:-9090}
+      - QUBIC_NODE_URL=${QUBIC_NODE_URL}
       - QUBIC_CONTRACT_ADDRESS=${QUBIC_CONTRACT_ADDRESS}
       - REDIS_URL=redis:6379
       - REDIS_PASSWORD=${REDIS_PASSWORD}
-      - REDIS_DB=0
-      - CACHE_TTL_SECONDS=300
-      - USE_MEMORY_CACHE=false
-      - LOG_LEVEL=info
-      - LOG_FORMAT=json
-      - METRICS_ENABLED=true
-      - METRICS_PORT=2112
+      - REDIS_DB=${REDIS_DB_TURBOAUTH:-0}
+      - CACHE_TTL_SECONDS=${TURBOAUTH_CACHE_TTL_SECONDS:-300}
+      - USE_MEMORY_CACHE=${TURBOAUTH_USE_MEMORY_CACHE:-false}
+      - LOG_LEVEL=${TURBOAUTH_LOG_LEVEL:-info}
+      - LOG_FORMAT=${TURBOAUTH_LOG_FORMAT:-json}
+      - METRICS_ENABLED=${TURBOAUTH_METRICS_ENABLED:-true}
+      - METRICS_PORT=${TURBOAUTH_METRICS_PORT:-2112}
     depends_on:
       - redis
     networks:
       - realtime-net
     restart: unless-stopped
     healthcheck:
-      test: [ "CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:8080/health" ]
+      test: [ "CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:${TURBOAUTH_HTTP_PORT:-8080}/health" ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # TurboRoute Service (HTTP + gRPC)
+  turboroute:
+    build:
+      context: ../services/turboroute/backend
+      dockerfile: Dockerfile
+    container_name: realtime-turboroute
+    env_file:
+      - ../.env
+    ports:
+      - "${TURBOROUTE_HTTP_PORT:-8081}:${TURBOROUTE_HTTP_PORT:-8081}"
+      - "${TURBOROUTE_GRPC_PORT:-9091}:${TURBOROUTE_GRPC_PORT:-9091}"
+      - "${TURBOROUTE_METRICS_PORT:-2113}:${TURBOROUTE_METRICS_PORT:-2113}"
+    environment:
+      - ENV=${TURBOROUTE_ENV:-production}
+      - HTTP_PORT=${TURBOROUTE_HTTP_PORT:-8081}
+      - GRPC_PORT=${TURBOROUTE_GRPC_PORT:-9091}
+      - QUBIC_NODE_URL=${QUBIC_NODE_URL}
+      - REDIS_URL=redis:6379
+      - REDIS_PASSWORD=${REDIS_PASSWORD}
+      - REDIS_DB=${REDIS_DB_TURBOROUTE:-1}
+      - LOG_LEVEL=${TURBOROUTE_LOG_LEVEL:-info}
+      - LOG_FORMAT=${TURBOROUTE_LOG_FORMAT:-json}
+      - METRICS_ENABLED=${TURBOROUTE_METRICS_ENABLED:-true}
+      - METRICS_PORT=${TURBOROUTE_METRICS_PORT:-2113}
+    depends_on:
+      - redis
+      - turboauth
+    networks:
+      - realtime-net
+    restart: unless-stopped
+    healthcheck:
+      test: [ "CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:${TURBOROUTE_HTTP_PORT:-8081}/health" ]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -60,7 +98,7 @@ services:
     image: prom/prometheus:latest
     container_name: realtime-prometheus
     ports:
-      - "9091:9090"
+      - "9093:9090"
     volumes:
       - ./prometheus.yml:/etc/prometheus/prometheus.yml
       - prometheus-data:/prometheus

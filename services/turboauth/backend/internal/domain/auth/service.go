@@ -15,6 +15,12 @@ type Service struct {
 	walletPort     WalletVerifierPort
 	trustStorePort TrustStorePort
 	cacheTTL       time.Duration
+
+	// Optional extended features (can be nil)
+	sessionPort   SessionPort
+	rateLimitPort RateLimitPort
+	webhookPort   WebhookPort
+	tokenPort     TokenPort
 }
 
 // NewService creates a new authentication service
